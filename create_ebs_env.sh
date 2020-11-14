@@ -11,6 +11,7 @@ fail() {
 }
 
 export AWS_DEFAULT_REGION=${AWS_REGION:-us-east-1}
+echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}."
 
 datetag=$(date +%Y%m%d%H%M)
 identifier=$(whoami)ivcr$datetag
@@ -34,7 +35,8 @@ echo "DB security group is $dbsg"
 # Create the database
 dbinstclass="db.t2.micro"
 dbstorage=5
-dbpass=$(dd if=/dev/urandom bs=128 count=1 2>/dev/null| tr -dc _A-Z-a-z-0-9)
+dbpass=sUpErSeCuRe123$(dd if=/dev/urandom bs=128 count=1 2>/dev/null| tr -dc _A-Z-a-z-0-9)
+echo "dbpass is $dbpass."
 aws rds create-db-instance \
     --db-name invoicer \
     --db-instance-identifier "$identifier" \
@@ -77,11 +79,12 @@ echo "ElasticBeanTalk application created"
 
 # Get the name of the latest Docker solution stack
 dockerstack="$(aws elasticbeanstalk list-available-solution-stacks | \
-    jq -r '.SolutionStacks[]' | grep -P '.+Amazon Linux.+running Docker.+' | head -1)"
+    jq -r '.SolutionStacks[]' | ggrep -P '.+Amazon Linux.+running Docker.+' | head -1)"
 
 # Create the EB API environment
 sed "s/POSTGRESPASSREPLACEME/$dbpass/" ebs-options.json > tmp/$identifier/ebs-options.json || fail
-sed -i "s/POSTGRESHOSTREPLACEME/$dbhost/" tmp/$identifier/ebs-options.json || fail
+sed -i ".bak" "s/POSTGRESHOSTREPLACEME/$dbhost/" tmp/$identifier/ebs-options.json || fail
+echo "dockerstack=$dockerstack."
 aws elasticbeanstalk create-environment \
     --application-name $identifier \
     --environment-name $identifier-invoicer-api \
